@@ -46,6 +46,9 @@ Currently, there are two implementations of the storage available:
 
 Most [examples](examples/) use the EEPROM implementation. See the [ESP32-NVS](examples/ESP32-NVS/ESP32-NVS.ino) example for NVS.
 
+Eventually you can pass NULL into the constructor of the SomfyRemote class in place of *rollingCodeStorage* and use external rolling code keeping logic. 
+If you are not using any storage, then you have to use `sendCommandWithCode` method instead of `sendCommand`.
+
 #### Available commands
 
 | Name    | Description                                     | HEX code |
@@ -60,8 +63,37 @@ Most [examples](examples/) use the EEPROM implementation. See the [ESP32-NVS](ex
 | SunFlag | Enable sun and wind detector                    | 9        |
 | Flag    | Disable sun detector                            | A        |
 
+The `sendCommand` function can be customized with a second parameter.
+The parameter controlls how often the command is repeated, default is 4 times.
+
+For remote control Telis 4 Modulis RTS5 the following applies:
+When the UP command is sent once, the blinds go up (Open).
+```cpp
+sendCommand(Command::Up, 1);
+```
+When the DOWN command is sent once, the blinds go down (Close).
+```cpp
+sendCommand(Command::Down, 1);
+```
+If you want to tilt the blinds, send the Up / Down command four times.
+```cpp
+sendCommand(Command::Up, 4);
+```
+or
+```cpp
+sendCommand(Command::Down, 4);
+```
+
 #### Register the Somfy Remote
 
 Before the emulated Somfy remote can control RTS devices, the remote must be registered.
 Therefore you can refer to the original manual of your RTS device, the only difference is that instead of pressing buttons, the commands from above must be used.
 So for example if the PROG button should be pressed, instead send the `Prog` command.
+
+### Troubleshooting
+
+#### Up/down commands not responsive after successful PROG
+
+If your blinds jump to respond to the PROG command when registering the remote, but following commands like up and down do not respond, it is likely that your rolling code storage is not persisting. The result of this is that the remote will send a constant rolling code, which the blinds will ignore.
+
+In the case of NVS storage, a possible cause for this is that the key used is too long. The key must [comform with the limitations of your microcontroller](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/nvs_flash.html#keys-and-values).
